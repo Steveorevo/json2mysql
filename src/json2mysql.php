@@ -9,7 +9,6 @@ class JSON2MySQL {
   public $climate = NULL;
   public $jsonDB = NULL;
   public $dbNames = [];
-  public $tables = [];
   public $db;
 
   /**
@@ -132,77 +131,88 @@ class JSON2MySQL {
 
     // Create tables and import data
     foreach($this->jsonDB->tables as $table) {
-      $sql = $table->create;
-      if ($this->db->query($sql) !== TRUE) {
-        echo "Error, creating table: " . $this->db->error;
-        exit();
-      }
 
-      // Import data
-      $last = round(microtime(true) * 1000);
-      $spin = 0;
-      foreach($table->data as $row) {
-        $sql = "INSERT INTO $table->name (";
-        $vals = "(";
-        foreach($table->columns as $col) {
-          $sql = $sql . $col->name . ',';
-          $v = $row->{$col->name};
-          if (NULL !== $v) {
-            if ($col->json_type === 'string') {
-              if (is_object($v) || is_array($v)) {
-                $vals = $vals . '"' . str_replace("\r", '\r', str_replace("\n", '\n', addslashes(serialize($v)))) . '",';
-              }else{
-                $vals = $vals . '"' . str_replace("\r", '\r', str_replace("\n", '\n', addslashes($v))) . '",';
-              }
-            }else{
-              if ($col->json_type === 'number') {
-                $vals = $vals . strval($v) . ',';
-              }else{
-                if ($v) { // Boolean
-                  $vals = $vals . 'true' . ',';
-                }else{
-                  $vals = $vals . 'false' . ',';
-                }
-              }
-            }
-          }else{
-            $vals = $vals . 'NULL' . ',';
-          }
+      // Check for implicit tables or default to all
+      $bSkip = false;
+      if ($this->climate->arguments->defined('tables')) {
+        $t = ',' . $this->climate->arguments->get('tables') . ',';
+        if (FALSE === strpos($t, "," . $table->name . ",")) {
+          $bSkip = true;
         }
-        $sql = new Steveorevo\GString($sql);
-        $sql = $sql->delRightMost(",")->concat(") VALUES " . $vals);
-        $sql = $sql->delRightMost(",")->concat(");\n");
+      }
+      if (FALSE === $bSkip) {
+        $sql = $table->create;
         if ($this->db->query($sql) !== TRUE) {
-          echo "Error, insert into table: " . $table->name . "\n";
-          echo $sql . "\n";
+          echo "Error, creating table: " . $this->db->error;
           exit();
         }
-        if (! $this->climate->arguments->defined('quiet')) {
-
-          // Spin the cursor
-          if ((round(microtime(true) * 1000) - 100) > $last) {
-            $last = round(microtime(true) * 1000);
-            echo chr(8);
-            if ($spin == 0 || $spin == 4) {
-              echo "|";
-            } elseif ($spin == 1 || $spin == 5) {
-              echo "/";
-            } elseif ($spin == 2 || $spin == 6) {
-              echo "-";
-            } elseif ($spin == 3 || $spin == 7) {
-              echo "\\";
-            }
-            if ($spin > 6) {
-              $spin = 0;
+  
+        // Import data
+        $last = round(microtime(true) * 1000);
+        $spin = 0;
+        foreach($table->data as $row) {
+          $sql = "INSERT INTO $table->name (";
+          $vals = "(";
+          foreach($table->columns as $col) {
+            $sql = $sql . $col->name . ',';
+            $v = $row->{$col->name};
+            if (NULL !== $v) {
+              if ($col->json_type === 'string') {
+                if (is_object($v) || is_array($v)) {
+                  $vals = $vals . '"' . str_replace("\r", '\r', str_replace("\n", '\n', addslashes(serialize($v)))) . '",';
+                }else{
+                  $vals = $vals . '"' . str_replace("\r", '\r', str_replace("\n", '\n', addslashes($v))) . '",';
+                }
+              }else{
+                if ($col->json_type === 'number') {
+                  $vals = $vals . strval($v) . ',';
+                }else{
+                  if ($v) { // Boolean
+                    $vals = $vals . 'true' . ',';
+                  }else{
+                    $vals = $vals . 'false' . ',';
+                  }
+                }
+              }
             }else{
-              $spin++;
+              $vals = $vals . 'NULL' . ',';
+            }
+          }
+          $sql = new Steveorevo\GString($sql);
+          $sql = $sql->delRightMost(",")->concat(") VALUES " . $vals);
+          $sql = $sql->delRightMost(",")->concat(");\n");
+          if ($this->db->query($sql) !== TRUE) {
+            echo "Error, insert into table: " . $table->name . "\n";
+            echo $sql . "\n";
+            exit();
+          }
+          if (! $this->climate->arguments->defined('quiet')) {
+  
+            // Spin the cursor
+            if ((round(microtime(true) * 1000) - 100) > $last) {
+              $last = round(microtime(true) * 1000);
+              echo chr(8);
+              if ($spin == 0 || $spin == 4) {
+                echo "|";
+              } elseif ($spin == 1 || $spin == 5) {
+                echo "/";
+              } elseif ($spin == 2 || $spin == 6) {
+                echo "-";
+              } elseif ($spin == 3 || $spin == 7) {
+                echo "\\";
+              }
+              if ($spin > 6) {
+                $spin = 0;
+              }else{
+                $spin++;
+              }
             }
           }
         }
+        if (! $this->climate->arguments->defined('quiet')) {
+          echo chr(8) . "Imported table: " . $table->name . "\n";
+        }       
       }
-      if (! $this->climate->arguments->defined('quiet')) {
-        echo chr(8) . "Imported table: " . $table->name . "\n";
-      }       
     }
     if (! $this->climate->arguments->defined('quiet')) {
       echo chr(8) . "Database import complete: " . $this->jsonDB->name . "\n";
