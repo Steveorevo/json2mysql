@@ -221,95 +221,6 @@ class JSON2MySQL {
     exit();
   }
 
-  //   $database = $this->climate->arguments->get('database');
-  //   if (FALSE == in_array($database, $this->dbNames)) {
-  //     if ($database == NULL) {
-  //       echo "Missing database name.\nType 'mysql2json --help' for more options.\n";
-  //     }else{
-  //       echo "Unknown database: $database\n";
-  //     }
-  //     exit();
-  //   }
-
-  //   // Define the creation for databases and tables
-  //   $this->getTables();
-  //   $this->connectToDB($database);
-  //   $objDB = new stdClass();
-  //   $objDB->name = $database;
-  //   $r = $this->db->query("SHOW CREATE DATABASE $database;");
-  //   if ($r->num_rows > 0) {
-  //     $row = $r->fetch_assoc();
-  //     $objDB->create = $row["Create Database"];
-  //   }
-  //   $objDB->tables = [];
-  //   foreach($this->tables as $name) {
-  //     $r = $this->db->query("SHOW CREATE TABLE $name;");
-  //     if ($r->num_rows > 0) {
-  //       $row = $r->fetch_assoc();
-  //       $table = new stdClass();
-  //       $table->name = $name;
-  //       $table->create = $row["Create Table"];
-  //       $table->columns = [];
-  //       $table->data = [];
-  //       array_push($objDB->tables, $table);
-  //     }
-  //   }
-
-  //   // Get column details for the given tables
-  //   $mapString = ["char","varchar","tinytext","text","mediumtext","longtext","binary",
-  //                 "varbinary","date","datetime","timestamp","time","year"];
-  //   $mapNumber = ["bit","tinyint","smallint","mediumint","int","integer","bigint",
-  //                 "decimal","dec","fixed","float","double","real"];
-  //   $mapBoolean = ["bool", "boolean"];
-  //   for ($i = 0; $i < count($objDB->tables); $i++) {
-  //     $name = $objDB->tables[$i]->name;
-  //     $r = $this->db->query("SHOW COLUMNS FROM $name;");
-  //     if ($r->num_rows > 0) {
-  //       while($row = $r->fetch_assoc()) {
-  //         $column = new stdClass();
-  //         $column->name = $row["Field"];
-  //         $type = new steveorevo\GString($row["Type"]);
-  //         $type = $type->getLeftMost("(")->__toString();
-  //         $column->mysql_type = $type;
-  //         if (FALSE !== in_array($type, $mapString)) {
-  //           $type = "string";
-  //         }else{
-  //           if (FALSE !== in_array($type, $mapNumber)) {
-  //             $type = "number";
-  //           }else{
-  //             if (FALSE !== in_array($type, $mapBoolean)) {
-  //               $type = "boolean";
-  //             }else{
-  //               $type = NULL;
-  //             }
-  //           }
-  //         }
-  //         $column->json_type = $type;
-  //         array_push($objDB->tables[$i]->columns, $column);
-  //       }
-  //     }
-  //   }
-
-  //   // Dump data for the given tables
-  //   for ($i = 0; $i < count($objDB->tables); $i++) {
-  //     $name = $objDB->tables[$i]->name;
-  //     $r = $this->db->query("SELECT * FROM $name;");
-  //     if ($r->num_rows > 0) {
-  //       $data = [];
-  //       while($row = $r->fetch_assoc()) {
-  //         array_push($objDB->tables[$i]->data, (object)$row);
-  //       }
-  //     }
-  //   }
-  //   $this->db->close();
-  //   $output = $this->climate->arguments->get('output');
-  //   if (NULL === $output) {
-  //     $output = getcwd() . "/" . $database . ".json";
-  //   }
-  //   file_put_contents($output, json_encode($objDB, JSON_PRETTY_PRINT));
-  //   exit();
-  // }
-
   /**
    * List available databases or tables for a given database
    */
@@ -357,31 +268,6 @@ class JSON2MySQL {
     echo "Copyright ©2018 Stephen J. Carnam\n";
     exit();
   }
-
-  // /**
-  //  * Gather the list of tables in the given database
-  //  */
-  // function getTables() {
-  //   $database = $this->climate->arguments->get('database');
-  //   $this->connectToDB($database);
-  //   $r = $this->db->query('SHOW TABLES;');
-  //   if ($r->num_rows > 0) {
-  //     while($row = $r->fetch_assoc()) {
-        
-  //       // Limit to implicit tables argument if present
-  //       $name = $row["Tables_in_$database"];
-  //       if ($this->climate->arguments->defined('tables')) {
-  //         $t = ',' . $this->climate->arguments->get('tables') . ',';
-  //         if (FALSE !== strpos($t, $name)) {
-  //           array_push($this->tables, $name);
-  //         }
-  //       }else{
-  //         array_push($this->tables, $name);
-  //       }
-  //     }
-  //   }
-  //   $this->db->close();
-  // }
 
   /**
    * Gather a list of available databases
