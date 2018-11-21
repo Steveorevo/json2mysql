@@ -5,7 +5,7 @@ JSON to database import tool with support for PHP serialization.
 
 ### About
 
-This command line tool will import the specified JSON file created from the companion tool (mysql2json)[https://github.com/steveorevo/mysql2json]. Auto-detection of objects will be stored as PHP serialized strings.  
+This command line tool will import the specified JSON file created from the companion tool [mysql2json](https://github.com/steveorevo/mysql2json). Auto-detection of objects will be stored as PHP serialized strings.  
 
 #### Help
 Type json2mysql --help
