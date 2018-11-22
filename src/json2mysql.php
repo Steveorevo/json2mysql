@@ -9,6 +9,7 @@ class JSON2MySQL {
   public $climate = NULL;
   public $jsonDB = NULL;
   public $dbNames = [];
+  public $dbName = "";
   public $db;
 
   /**
@@ -72,13 +73,19 @@ class JSON2MySQL {
         'prefix'       => 'q',
         'longPrefix'   => 'quiet',
         'description'  => 'quiet (no output and default question to yes)',
-        'noValue'      => true
+        'noValue'      => true,
       ],
       'version' => [
         'prefix'       => 'v',
         'longPrefix'   => 'version',
         'description'  => 'output version number',
         'noValue'      => true,
+      ],
+      'dbname' => [
+        'prefix'       => 'd',
+        'longPrefix'   => 'dbname',
+        'description'  => 'override, create/import using specified database name',
+        'defaultValue' => '',
       ],
       'json_file' => [
         'description'  => 'the json file to import'
@@ -102,8 +109,8 @@ class JSON2MySQL {
 
     // Prompt for database overwrite
     if (! $this->climate->arguments->defined('quiet')) {
-      if (FALSE !== in_array($this->jsonDB->name, $this->dbNames)) {
-        $input = $this->climate->confirm("Database " . $this->jsonDB->name . " exists. Overwrite (destroy) existing?");
+      if (FALSE !== in_array($this->dbName, $this->dbNames)) {
+        $input = $this->climate->confirm("Database " . $this->dbName . " exists. Overwrite (destroy) existing?");
         if (!$input->confirmed()) {
             exit();
         }
@@ -112,17 +119,21 @@ class JSON2MySQL {
 
     // Create (drop any existing) database definition
     $this->connectToDB();
-    $sql = "DROP DATABASE IF EXISTS `" . $this->jsonDB->name . "`;\n";
+    $sql = "DROP DATABASE IF EXISTS `" . $this->dbName . "`;\n";
     if ($this->db->query($sql) !== TRUE) {
         echo "Error, dropping database: " . $this->db->error;
         exit();
     }
-    $sql = $this->jsonDB->create . ";\n";
+    $create = $this->jsonDB->create;
+    if ($this->jsonDB->name != $this->dbName) {
+      $create = str_replace($this->jsonDB->name, $this->dbName, $create);
+    }
+    $sql =  $create . ";\n";
     if ($this->db->query($sql) !== TRUE) {
       echo "Error, creating database: " . $this->db->error;
       exit();
     }else{
-      $sql = "USE `" . $this->jsonDB->name . "`;\n";
+      $sql = "USE `" . $this->dbName . "`;\n";
       if ($this->db->query($sql) !== TRUE) {
         echo "Error, using database: " . $this->db->error;
         exit();
@@ -215,7 +226,7 @@ class JSON2MySQL {
       }
     }
     if (! $this->climate->arguments->defined('quiet')) {
-      echo chr(8) . "Database import complete: " . $this->jsonDB->name . "\n";
+      echo chr(8) . "Database import complete: " . $this->dbName . "\n";
     }
     $this->db->close();
     exit();
@@ -256,6 +267,12 @@ class JSON2MySQL {
     } catch (Exception $e) {
       echo 'Error, parsing JSON file: ',  $e->getMessage(), "\n";
       exit();
+    }
+
+    // Override database name if specified
+    $this->dbName = $this->climate->arguments->get('dbname');
+    if ($this->dbName == '') {
+      $this->dbName = $this->jsonDB->name;
     }
   }
 
