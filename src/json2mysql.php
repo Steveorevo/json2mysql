@@ -124,9 +124,10 @@ class JSON2MySQL {
         echo "Error, dropping database: " . $this->db->error;
         exit();
     }
-    $create = $this->jsonDB->create;
-    if ($this->jsonDB->name != $this->dbName) {
-      $create = str_replace($this->jsonDB->name, $this->dbName, $create);
+    $create = $this->jsonDB['create'];
+    
+    if ($this->jsonDB['name'] != $this->dbName) {
+      $create = str_replace($this->jsonDB['name'], $this->dbName, $create);
     }
     $sql =  $create . ";\n";
     if ($this->db->query($sql) !== TRUE) {
@@ -141,18 +142,18 @@ class JSON2MySQL {
     }
 
     // Create tables and import data
-    foreach($this->jsonDB->tables as $table) {
+    foreach($this->jsonDB['tables'] as $table) {
 
       // Check for implicit tables or default to all
       $bSkip = false;
       if ($this->climate->arguments->defined('tables')) {
         $t = ',' . $this->climate->arguments->get('tables') . ',';
-        if (FALSE === strpos($t, "," . $table->name . ",")) {
+        if (FALSE === strpos($t, "," . $table['name'] . ",")) {
           $bSkip = true;
         }
       }
       if (FALSE === $bSkip) {
-        $sql = $table->create;
+        $sql = $table['create'];
         if ($this->db->query($sql) !== TRUE) {
           echo "Error, creating table: " . $this->db->error;
           exit();
@@ -161,21 +162,21 @@ class JSON2MySQL {
         // Import data
         $last = round(microtime(true) * 1000);
         $spin = 0;
-        foreach($table->data as $row) {
-          $sql = "INSERT INTO $table->name (";
+        foreach($table['data'] as $row) {
+          $sql = "INSERT INTO " . $table['name'] . " (";
           $vals = "(";
-          foreach($table->columns as $col) {
-            $sql = $sql . $col->name . ',';
-            $v = $row->{$col->name};
+          foreach($table['columns'] as $col) {
+            $sql = $sql . $col['name'] . ',';
+            $v = $row[$col['name']];
             if (NULL !== $v) {
-              if ($col->json_type === 'string') {
+              if ($col['json_type'] === 'string' || $col['json_type'] === 'object') {
                 if (is_object($v) || is_array($v)) {
                   $vals = $vals . '"' . str_replace("\r", '\r', str_replace("\n", '\n', addslashes(serialize($v)))) . '",';
                 }else{
                   $vals = $vals . '"' . str_replace("\r", '\r', str_replace("\n", '\n', addslashes($v))) . '",';
                 }
               }else{
-                if ($col->json_type === 'number') {
+                if ($col['json_type'] === 'number') {
                   $vals = $vals . strval($v) . ',';
                 }else{
                   if ($v) { // Boolean
@@ -193,7 +194,7 @@ class JSON2MySQL {
           $sql = $sql->delRightMost(",")->concat(") VALUES " . $vals);
           $sql = $sql->delRightMost(",")->concat(");\n");
           if ($this->db->query($sql) !== TRUE) {
-            echo "Error, insert into table: " . $table->name . "\n";
+            echo "Error, insert into table: " . $table['name'] . "\n";
             echo $sql . "\n";
             exit();
           }
@@ -221,7 +222,7 @@ class JSON2MySQL {
           }
         }
         if (! $this->climate->arguments->defined('quiet')) {
-          echo chr(8) . "Imported table: " . $table->name . "\n";
+          echo chr(8) . "Imported table: " . $table['name'] . "\n";
         }       
       }
     }
@@ -238,9 +239,9 @@ class JSON2MySQL {
   function doListing() {
     if (! $this->climate->arguments->defined('list')) return;
     $this->parseJSONFile();
-    echo "JSON file contains database " . $this->jsonDB->name . " with tables:\n";
-    foreach($this->jsonDB->tables as $table) {
-      echo "   $table->name\n";
+    echo "JSON file contains database " . $this->jsonDB['name'] . " with tables:\n";
+    foreach($this->jsonDB['tables'] as $table) {
+      echo "   " . $table['name'] . "\n";
     }
     exit();
   }
@@ -263,7 +264,7 @@ class JSON2MySQL {
       }
     }
     try {
-      $this->jsonDB = json_decode(file_get_contents($json_file));
+      $this->jsonDB = json_decode(file_get_contents($json_file), true);
     } catch (Exception $e) {
       echo 'Error, parsing JSON file: ',  $e->getMessage(), "\n";
       exit();
@@ -272,7 +273,7 @@ class JSON2MySQL {
     // Override database name if specified
     $this->dbName = $this->climate->arguments->get('dbname');
     if ($this->dbName == '') {
-      $this->dbName = $this->jsonDB->name;
+      $this->dbName = $this->jsonDB['name'];
     }
   }
 
