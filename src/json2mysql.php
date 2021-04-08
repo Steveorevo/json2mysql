@@ -35,7 +35,7 @@ class JSON2MySQL {
       ],
       'host' => [
         'prefix'       => 'h',
-        'longPrefix'   => 'hose',
+        'longPrefix'   => 'host',
         'description'  => 'host name or IP address (default: localhost)',
         'defaultValue' => 'localhost',
       ],
