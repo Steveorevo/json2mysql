@@ -3,9 +3,16 @@
  * JSON2MySQL Class and command line tool.
  */
 
-require_once( __DIR__ . '/../vendor/autoload.php' );
+// Resolve autoloader
+foreach ([__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php'] as $file) {
+  if (file_exists($file)) {
+      require $file;
+      break;
+  }
+}
+
 class JSON2MySQL {
-  public $version = "1.1.1"; // TODO: obtain via composer
+  public $version = "1.1.2"; // TODO: obtain via composer
   public $climate = NULL;
   public $jsonDB = NULL;
   public $dbNames = [];
