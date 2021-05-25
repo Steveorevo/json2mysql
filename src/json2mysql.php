@@ -66,6 +66,12 @@ class JSON2MySQL {
         'description' => 'the TCP/IP port number to connect to',
         'castTo'      => 'int',
       ],
+      'skip_create' => [
+        'prefix'      => 's',
+        'longPrefix'  => 'skip',
+        'description' => 'skip dropping/creating of existing database',
+        'noValue'     => true,
+      ],
       'tables' => [
         'prefix'       => 't',
         'longPrefix'   => 'tables',
@@ -119,36 +125,42 @@ class JSON2MySQL {
     // Prompt for database overwrite
     if (! $this->climate->arguments->defined('quiet')) {
       if (FALSE !== in_array($this->dbName, $this->dbNames)) {
-        $input = $this->climate->confirm("Database " . $this->dbName . " exists. Overwrite (destroy) existing?");
-        if (!$input->confirmed()) {
-            exit();
+        if (! $this->climate->arguments->defined('skip_create')) {
+          $input = $this->climate->confirm("Database " . $this->dbName . " exists. Use --skip_create option to preserve database. Overwrite (destroy) existing?");
+          if (!$input->confirmed()) {
+              exit();
+          }
         }
       }
     }
 
-    // Create (drop any existing) database definition
     $this->connectToDB();
-    $sql = "DROP DATABASE IF EXISTS `" . $this->dbName . "`;\n";
-    if ($this->db->query($sql) !== TRUE) {
-        echo "Error, dropping database: " . $this->db->error;
-        exit();
-    }
-    $create = $this->jsonDB['create'];
-    
-    if ($this->jsonDB['name'] != $this->dbName) {
-      $create = str_replace($this->jsonDB['name'], $this->dbName, $create);
-    }
-    $sql =  $create . ";\n";
-    if ($this->db->query($sql) !== TRUE) {
-      echo "Error, creating database: " . $this->db->error;
-      exit();
-    }else{
-      $sql = "USE `" . $this->dbName . "`;\n";
+
+    // Create (drop any existing) database definition
+    if (! $this->climate->arguments->defined('skip_create')) {
+      $sql = "DROP DATABASE IF EXISTS `" . $this->dbName . "`;\n";
       if ($this->db->query($sql) !== TRUE) {
-        echo "Error, using database: " . $this->db->error;
-        exit();
+          echo "Error, dropping database: " . $this->db->error;
+          exit();
       }
+      $create = $this->jsonDB['create'];
+      
+      if ($this->jsonDB['name'] != $this->dbName) {
+        $create = str_replace($this->jsonDB['name'], $this->dbName, $create);
+      }
+      $sql =  $create . ";\n";
+      if ($this->db->query($sql) !== TRUE) {
+        echo "Error, creating database: " . $this->db->error;
+        exit();
+      } 
     }
+
+    // Always use specified database
+    $sql = "USE `" . $this->dbName . "`;\n";
+    if ($this->db->query($sql) !== TRUE) {
+      echo "Error, using database: " . $this->db->error;
+      exit();
+    } 
 
     // Create tables and import data
     foreach($this->jsonDB['tables'] as $table) {
