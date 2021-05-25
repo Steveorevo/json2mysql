@@ -304,13 +304,6 @@ class JSON2MySQL {
   function replace_leaf(&$data, $path, $obj) {
     $path = substr($path, strlen(JSON2MySQL::SEPARATOR));
     $leafs = explode(JSON2MySQL::SEPARATOR, $path);
-    // $code = "\$data";
-    // foreach($leafs as $p) {
-    //   $code .= "['$p']";
-    // }
-    // $code .= " = \$obj;";
-
-    // eval($code);
 
     $i = 0;
     $result[$i] = &$data;
