@@ -191,7 +191,11 @@ class JSON2MySQL {
             $v = $row[$col['name']];
             if (NULL !== $v) {
               if ($col['json_type'] === 'string' || $col['json_type'] === 'object') {
+                if ($col['json_type'] === 'string' || gettype($v) == 'string') {
+                  $vals = $vals . '"' . mysqli_real_escape_string($this->db, $v) . '",';
+                }else{
                   $vals = $vals . '"' . mysqli_real_escape_string($this->db, serialize($v)) . '",';
+                }
               }else{
                 if ($col['json_type'] === 'number') {
                   $vals = $vals . strval($v) . ',';
@@ -295,7 +299,7 @@ class JSON2MySQL {
     }
 
     // Get array of paths to __PHP_Incomplete_Class_Name 
-    $paths = $this->get_ic_paths($this->jsonDB);
+    $paths = $this->get_paths($this->jsonDB, '__PHP_Incomplete_Class_Name');
 
     // Generate mirror classes and object instances for each __PHP_Incomplete_Class_Name
     foreach($paths as $p) {
@@ -303,6 +307,11 @@ class JSON2MySQL {
       $mirror = $this->generate_ic_mirror($data);
       $this->replace_leaf($this->jsonDB, $p, $mirror);
     }
+
+    // Get array of paths to __PHP_stdClass
+    $paths = $this->get_paths($this->jsonDB, '__PHP_stdClass');
+    //var_dump($paths);
+    exit();
   } 
 
   /**
@@ -389,29 +398,34 @@ class JSON2MySQL {
   }
 
   /**
-   * Get an array of paths to __PHP_Incomplete_Class_Name values
+   * Get an array of paths to the given key 
    */
-  function get_ic_paths($data) {
+  function get_paths($data, $key) {
     $all = [];
-    function find_ic_recursive(array $array, $path = null, &$all = []) {
-        foreach ($array as $k => $v) {
-            if (!is_array($v)) {
-                if ($k === '__PHP_Incomplete_Class_Name') {
-                  array_push($all, $path);
-                }
-            }
-            else {
-                // directory node -- recurse
-                find_ic_recursive($v, $path . JSON2MySQL::SEPARATOR . $k, $all);
-            }
-        }
-    }
-    find_ic_recursive($data, null, $all);
+    $all = $this->find_path_recursive($data, null, $all, $key);
 
     // Sort list with longest paths we need to resolve first
     usort($all, function($a, $b) {
         return strlen($b) - strlen($a);
     });
+    return $all;
+  }
+
+  /**
+   * Find path recursively 
+   */
+  function find_path_recursive(array $array, $path = null, &$all = [], $key) {
+    foreach ($array as $k => $v) {
+        if (!is_array($v)) {
+            if ($k === $key) {
+              array_push($all, $path);
+            }
+        }
+        else {
+            // directory node -- recurse
+            $all = $this->find_path_recursive($v, $path . JSON2MySQL::SEPARATOR . $k, $all, $key);
+        }
+    }
     return $all;
   }
 
