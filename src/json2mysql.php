@@ -12,7 +12,7 @@ foreach ([__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php
 }
 
 class JSON2MySQL {
-  public $version = "2.0.0"; // TODO: obtain via composer
+  public $version = "2.1.0"; // TODO: obtain via composer
   public $climate = NULL;
   public $jsonDB = NULL;
   public $dbNames = [];
@@ -298,20 +298,21 @@ class JSON2MySQL {
       $this->dbName = $this->jsonDB['name'];
     }
 
-    // Get array of paths to __PHP_Incomplete_Class_Name 
-    $paths = $this->get_paths($this->jsonDB, '__PHP_Incomplete_Class_Name');
-
     // Generate mirror classes and object instances for each __PHP_Incomplete_Class_Name
+    $paths = $this->get_paths($this->jsonDB, '__PHP_Incomplete_Class_Name');
     foreach($paths as $p) {
       $data = $this->get_leaf($this->jsonDB, $p);
       $mirror = $this->generate_ic_mirror($data);
       $this->replace_leaf($this->jsonDB, $p, $mirror);
     }
 
-    // Get array of paths to __PHP_stdClass
+    // Ensure each object with __PHP_stdClass property is stored as an stdClass
     $paths = $this->get_paths($this->jsonDB, '__PHP_stdClass');
-    //var_dump($paths);
-    exit();
+    foreach($paths as $p) {
+      $data = $this->get_leaf($this->jsonDB, $p);
+      unset($data['__PHP_stdClass']);
+      $this->replace_leaf($this->jsonDB, $p, $data, true);
+    }
   } 
 
   /**
@@ -321,8 +322,9 @@ class JSON2MySQL {
    * @param string $data The given array
    * @param string $path The path (keys divided by separators) to the element
    * @param object $obj The object to set the given leaf key to
+   * @param boolean $as_object Cast the new leaf as a stdClass or associative array (default);
    */
-  function replace_leaf(&$data, $path, $obj) {
+  function replace_leaf(&$data, $path, $obj, $as_object = false) {
     $path = substr($path, strlen(JSON2MySQL::SEPARATOR));
     $leafs = explode(JSON2MySQL::SEPARATOR, $path);
 
@@ -332,7 +334,11 @@ class JSON2MySQL {
         $i++;
         $result[$i] = &$result[$i-1][$p];
     }
-    $result[$i] = $obj;
+    if ($as_object) {
+      $result[$i] = (object) $obj;
+    }else{
+      $result[$i] = $obj;
+    }
   }
 
   /**
