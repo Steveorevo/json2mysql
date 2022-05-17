@@ -413,8 +413,18 @@ class JSON2MySQL {
     // Define the mirror class
     $unique_class_name = $data['__PHP_Incomplete_Class_Name'];
     if (array_key_exists($unique_class_name, $this->class_map)) {
-      $unique_class_name = substr($data['__PHP_Incomplete_Class_Name'], 0, -3) . str_pad($this->class_count, 3, '0', STR_PAD_LEFT);
-      $this->class_count++;
+      if (strlen($unique_class_name) > 4 ) {
+        $uext = str_pad(base_convert($this->class_count, 10, 36), 4, '_', STR_PAD_LEFT);
+        if (strlen($uext) > 4) {
+          echo "Error, unable to map beyond 1679615 unique __PHP_Incomplete_Class_Name instances.\n";
+          exit();
+        }
+        $unique_class_name = substr($data['__PHP_Incomplete_Class_Name'], 0, -4) . $uext;
+        $this->class_count++;
+      }else{
+        echo "Error, unable to map __PHP_Incomplete_Class_Name < 4 characters.\n";
+        exit();
+      }
     }
     $this->class_map += array($unique_class_name => $data['__PHP_Incomplete_Class_Name']);
     $code = "if (! class_exists('${unique_class_name}')) {\n";
