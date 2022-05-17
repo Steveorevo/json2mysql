@@ -11,6 +11,7 @@ foreach ([__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php
   }
 }
 
+use Steveorevo\GString as GString;
 class JSON2MySQL {
   public $version = "2.1.0"; // TODO: obtain via composer
   public $climate = NULL;
@@ -18,6 +19,8 @@ class JSON2MySQL {
   public $dbNames = [];
   public $dbName = "";
   public $db;
+  public $class_count = 0;
+  public $class_map = [];
 
   const SEPARATOR = "\f~\v";
 
@@ -198,7 +201,7 @@ class JSON2MySQL {
                 if ($col['json_type'] === 'string' || gettype($v) == 'string') {
                   $vals = $vals . '"' . mysqli_real_escape_string($this->db, $v) . '",';
                 }else{
-                  $vals = $vals . '"' . mysqli_real_escape_string($this->db, serialize($v)) . '",';
+                  $vals = $vals . '"' . mysqli_real_escape_string($this->db, $this->restore_references(serialize($v))) . '",';
                 }
               }else{
                 if ($col['json_type'] === 'number') {
@@ -215,7 +218,8 @@ class JSON2MySQL {
               $vals = $vals . 'NULL' . ',';
             }
           }
-          $sql = new Steveorevo\GString($sql);
+
+          $sql = new GString($sql);
           $sql = $sql->delRightMost(",")->concat(") VALUES " . $vals);
           $sql = $sql->delRightMost(",")->concat(");\n");
           if ($this->db->query($sql) !== TRUE) {
@@ -257,6 +261,40 @@ class JSON2MySQL {
     }
     $this->db->close();
     exit();
+  }
+
+  /**
+   * Restore object references found with '__PHP_reference'
+   */ 
+  function restore_references($data) {
+    if (strpos($data, '__PHP_reference";') !== false) {
+      $lines = explode('__PHP_reference";', $data);
+      for($i=0; $i < (count($lines)-1); $i++) {
+        $line = $lines[$i];
+        $line = new GString($line);
+        $before = $line->delRightMost('s:')->__toString() . 's:';
+
+        // Recalculate new key-length
+        $n = $line->getRightMost('s:')->getLeftMost(':')->__toString();
+        $n = intval($n) - 15; 
+        $after = ':' . $line->getRightMost('s:')->delLeftMost(':')->__toString();
+        $lines[$i] = utf8_encode($before . $n . $after);
+        
+        // Restore reference identifier
+        if (substr($lines[$i + 1], 0, 2) == 'i:') {
+          $lines[$i + 1] = 'r:' . substr($lines[$i + 1], 2);
+        }
+      }
+     $data = implode('";', $lines);
+    }
+    
+    // Restore common classnames
+    foreach( $this->class_map as $key => $value ) {
+      if ($key != $value) {
+        $data = str_replace($key, $value, $data);
+      }
+    }
+    return $data;
   }
 
   /**
@@ -317,6 +355,7 @@ class JSON2MySQL {
       unset($data['__PHP_stdClass']);
       $this->replace_leaf($this->jsonDB, $p, $data, true);
     }
+    
   } 
 
   /**
@@ -372,8 +411,14 @@ class JSON2MySQL {
   function generate_ic_mirror($data) {
 
     // Define the mirror class
-    $code = "if (! class_exists('${data['__PHP_Incomplete_Class_Name']}')) {\n";
-    $code .= "  class ${data['__PHP_Incomplete_Class_Name']} {\n";
+    $unique_class_name = $data['__PHP_Incomplete_Class_Name'];
+    if (array_key_exists($unique_class_name, $this->class_map)) {
+      $unique_class_name = substr($data['__PHP_Incomplete_Class_Name'], 0, -3) . str_pad($this->class_count, 3, '0', STR_PAD_LEFT);
+      $this->class_count++;
+    }
+    $this->class_map += array($unique_class_name => $data['__PHP_Incomplete_Class_Name']);
+    $code = "if (! class_exists('${unique_class_name}')) {\n";
+    $code .= "  class ${unique_class_name} {\n";
     $con = "";
     $i = 0;
 
@@ -403,7 +448,8 @@ class JSON2MySQL {
     $code .= "  }\n";
     $code .= "}\n";
     eval($code);
-    $mirror = new $data['__PHP_Incomplete_Class_Name']($values);
+
+    $mirror = new $unique_class_name($values);
     return $mirror;
   }
 
@@ -484,7 +530,7 @@ class JSON2MySQL {
 // From command line, create instance & do cli arguments
 if ( PHP_SAPI === 'cli' ) {
   $myCmd = new JSON2MySQL();
-  $name = new Steveorevo\GString(__FILE__);
+  $name = new GString(__FILE__);
   $argv[0] = $name->getRightMost("/")->delRightMost(".");
   $myCmd->cli();
 }
