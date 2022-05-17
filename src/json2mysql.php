@@ -13,7 +13,7 @@ foreach ([__DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php
 
 use Steveorevo\GString as GString;
 class JSON2MySQL {
-  public $version = "2.1.2"; // TODO: obtain via composer
+  public $version = "2.1.3"; // TODO: obtain via composer
   public $climate = NULL;
   public $jsonDB = NULL;
   public $dbNames = [];
