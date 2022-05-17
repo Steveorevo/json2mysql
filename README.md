@@ -12,7 +12,7 @@ Type json2mysql --help
 
 ```
 JSON2MySQL is a JSON import tool with support for PHP serialization.
-Version 2.1.3
+Version 2.1.4
 
 Usage: json2mysql [-d dbname, --dbname dbname] [-?, --help] [-h host, --host host (default: localhost)] [-l, --list] [-p password, --password password] [-P port, --port port] [-q, --quiet] [-s, --skip] [-t tables, --tables tables] [-u user, --user user (default: root)] [-v, --version] [json_file]
 
